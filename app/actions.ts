@@ -1,6 +1,6 @@
 'use server';
 
-import puppeteer from 'puppeteer';
+import * as cheerio from 'cheerio';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -37,136 +37,117 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
         };
     }
 
-    let browser;
     try {
-        browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-blink-features=AutomationControlled', // Hide automation features
-            ],
+        // use fetch to get the HTML
+        // Note: server-side fetch in Next.js/Node
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Cache-Control': 'max-age=0',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Upgrade-Insecure-Requests': '1'
+            },
+            next: { revalidate: 0 } // No cache for fresh results
         });
 
-        const page = await browser.newPage();
-
-        // mimic a real user
-        await page.setUserAgent(
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        );
-
-        // Add language headers
-        await page.setExtraHTTPHeaders({
-            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        });
-
-        // Hide webdriver property
-        await page.evaluateOnNewDocument(() => {
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => false,
-            });
-        });
-
-        // Instagram is heavy, give it some time, but fail fast if blocked
-        // networkidle2 is better for SPAs like Instagram
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-
-        // Try to wait for the critical data script
-        try {
-            await page.waitForSelector('script[type="application/ld+json"]', { timeout: 5000 });
-        } catch (e) {
-            console.log('JSON-LD script not found within timeout, proceeding with fallback...');
+        if (!response.ok) {
+           if (response.status === 404) {
+             throw new Error('게시물을 찾을 수 없습니다.');
+           }
+           if (response.status === 429) {
+             throw new Error('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+           }
+           if (response.status === 401 || response.status === 403) {
+             // Often means Instagram blocked the IP or requires login
+             console.warn('Access denied/Login required:', response.status);
+             // We can proceed to try reading whatever HTML came back, sometimes it has info, but usually likely an error page.
+             // But usually fetch throws/returns error page.
+           }
         }
 
-        // Extract Data
-        const data = await page.evaluate(() => {
-            let jsonLd = null;
-            // Look for the specific JSON-LD script that contains the post data
-            // Usually it's strictly inside a schema.org script
-            const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+        const html = await response.text();
+        const $ = cheerio.load(html);
 
-            for (const script of scripts) {
-                try {
-                    const content = JSON.parse(script.textContent || '{}');
-                    // We are looking for something that looks like a SocialMediaPosting or Clip
-                    // Often Instagram wraps it in a logic graph, but commonly the top level is what we want or part of a graph
-                    if (content['@type'] === 'InstagramPublicProfile') continue; // Skip profile data
+        // --- Extract Data using Cheerio ---
 
-                    // Check for key fields
-                    if (content.uploadDate || content.datePublished || content.interactionStatistic) {
-                        jsonLd = content;
-                        break;
-                    }
-                } catch (e) {
-                    continue;
-                }
-            }
+        // 1. Open Graph Meta Tags (Most reliable for public info)
+        const ogTitle = $('meta[property="og:title"]').attr('content');
+        const ogDesc = $('meta[property="og:description"]').attr('content');
+        const ogImage = $('meta[property="og:image"]').attr('content');
+        // const ogUrl = $('meta[property="og:url"]').attr('content');
+        const pageTitle = $('title').text();
 
-            // Fallback: Open Graph
-            const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content');
-            const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content');
-            const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
-            const ogUrl = document.querySelector('meta[property="og:url"]')?.getAttribute('content');
-
-            // Fallback: Time (if hidden in JSON but present in DOM)
-            const timeEl = document.querySelector('time');
-            const domTime = timeEl ? timeEl.getAttribute('datetime') : null;
-
-            return {
-                jsonLd,
-                og: { ogTitle, ogDesc, ogImage, ogUrl },
-                domTime,
-                title: document.title // Capture title for debugging
+        // Check for login page redirection or error page in content
+        if ((pageTitle.includes('Login') || pageTitle.includes('Page Not Found')) && !ogTitle) {
+             return {
+                postType: null,
+                uploadTime: '',
+                likes: null,
+                comments: null,
+                views: null,
+                caption: null,
+                imageUrl: null,
+                author: null,
+                error: '비공개 게시물이거나, 삭제된 게시물, 또는 로그인이 필요합니다.',
             };
-        });
-
-        if (!data.jsonLd && !data.og.ogDesc) {
-            // Likely private or error page
-            // Check for "Restricted profile" text or login redirect
-            const pageTitle = data.title;
-            // console.log('Page Title:', pageTitle); // For server-side debugging
-
-            if (pageTitle.includes('Login') || pageTitle.includes('Page Not Found')) {
-                return {
-                    postType: null,
-                    uploadTime: '',
-                    likes: null,
-                    comments: null,
-                    views: null,
-                    caption: null,
-                    imageUrl: null,
-                    author: null,
-                    error: '비공개 게시물이거나, 삭제된 게시물, 또는 로그인이 필요합니다.',
-                };
-            }
         }
+
+        // 2. JSON-LD parsing (Rich data)
+        let jsonLd: any = null;
+        $('script[type="application/ld+json"]').each((_, el) => {
+            try {
+                const text = $(el).html();
+                if (!text) return;
+                
+                const content = JSON.parse(text);
+                
+                // Sometimes it's an array of objects
+                const items = Array.isArray(content) ? content : [content];
+
+                for (const item of items) {
+                    if (item['@type'] === 'InstagramPublicProfile') continue;
+                    
+                    if (item.uploadDate || item.datePublished || item.interactionStatistic) {
+                        jsonLd = item;
+                        return false; // break loop
+                    }
+                }
+            } catch (e) {
+                // ignore parse error
+            }
+        });
 
         // --- Process Data ---
 
-        // 1. Determine Post Type & URL Type
+        // 1. Determine Post Type
         const isReel = url.includes('/reel/');
         const postType = isReel ? 'Reel' : 'Post';
 
-        // 2. Extract Metrics (Likes, Comments, Views)
+        // 2. Extract Metrics
         let likes = null;
         let comments = null;
         let views = null;
         let uploadDateRaw: string | null = null;
         let caption = null;
         let author = null;
-        let imageUrl = data.og.ogImage || null;
+        let imageUrl = ogImage || null;
 
-        if (data.jsonLd) {
-            uploadDateRaw = data.jsonLd.uploadDate || data.jsonLd.datePublished || null;
-            caption = data.jsonLd.caption || data.jsonLd.headline || data.jsonLd.articleBody || null;
-            author = data.jsonLd.author?.name || data.jsonLd.author?.alternateName || null;
+        if (jsonLd) {
+             uploadDateRaw = jsonLd.uploadDate || jsonLd.datePublished || null;
+             caption = jsonLd.caption || jsonLd.headline || jsonLd.articleBody || null;
+             author = jsonLd.author?.name || jsonLd.author?.alternateName || null;
 
-            // Metrics in JSON-LD usually come in interactionStatistic array
-            if (Array.isArray(data.jsonLd.interactionStatistic)) {
-                for (const stat of data.jsonLd.interactionStatistic) {
+             if (Array.isArray(jsonLd.interactionStatistic)) {
+                for (const stat of jsonLd.interactionStatistic) {
                     const type = stat.interactionType;
                     const count = stat.userInteractionCount;
 
+                    // Support both full URL and short type
                     if (type === 'http://schema.org/LikeAction' || type === 'LikeAction') {
                         likes = count.toString();
                     } else if (type === 'http://schema.org/CommentAction' || type === 'CommentAction') {
@@ -178,19 +159,17 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
             }
         }
 
-        // Fallbacks if JSON-LD missed something
-        if (!uploadDateRaw && data.domTime) {
-            uploadDateRaw = data.domTime;
-        }
+        // Fallback: Time from DOM? 
+        // Cheerio sees what is returned. IF Instagram returns SSR HTML for this User-Agent (which they do for Bots), 
+        // we might find the date. But often it's Hydrated on client.
+        // Assuming JSON-LD is the best bet.
 
-        // OG Description fallback for Likes/Comments
+        // Parsing OG Description for Likes/Comments if JSON-LD failed
         // Format: "100 Likes, 5 Comments - ..."
-        if ((!likes || !comments) && data.og.ogDesc) {
-            const parts = data.og.ogDesc.split('-');
+        if ((!likes || !comments) && ogDesc) {
+            const parts = ogDesc.split('-');
             if (parts.length > 0) {
-                const stats = parts[0].trim(); // "X Likes, Y Comments"
-                // Simple regex to extract numbers if needed, but often "1,234 Likes" is good enough string
-                // Let's try to be cleaner
+                const stats = parts[0].trim();
                 const likeMatch = stats.match(/([\d,.]+[km]?) likes?/i);
                 const commentMatch = stats.match(/([\d,.]+[km]?) comments?/i);
 
@@ -198,29 +177,41 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
                 if (!comments && commentMatch) comments = commentMatch[1];
             }
         }
+        
+        // Sometimes the title has the author: "User (@username) on Instagram:..." or "Name (@username) • Instagram photos..."
+        if (!author && pageTitle) {
+             // Pattern: "Name (@username) •"
+             const authorMatch = pageTitle.match(/\(@([^\)]+)\)/);
+             if (authorMatch) {
+                 author = authorMatch[1]; 
+             }
+        }
+
 
         // 3. Time Conversion (UTC -> KST)
         let uploadTime = '알 수 없음';
         if (uploadDateRaw) {
-            // ISO format usually: 2024-08-16T05:00:00.000Z
-            // We want: 2026-02-02 14:37 (KST)
-            // dayjs handles the timezone conversion
             uploadTime = dayjs(uploadDateRaw).tz('Asia/Seoul').format('YYYY-MM-DD HH:mm') + ' (KST)';
         }
 
         return {
             postType,
             uploadTime,
-            likes: likes || '0', // Default to 0 if found but empty, null if completely failed? Requirement says "Number", so let's try to show 0 if permissible.
+            likes: likes || '0',
             comments: comments || '0',
-            views: isReel ? (views || '비공개') : null, // Views only for reels
-            caption: caption || data.og.ogTitle || null,
+            views: isReel ? (views || '비공개') : null,
+            caption: caption || ogTitle || null,
             imageUrl,
             author,
         };
 
-    } catch (error) {
-        console.error('Puppeteer error:', error);
+    } catch (error: any) {
+        console.error('Scraping error:', error);
+        
+        let errorMessage = '데이터를 가져오는데 실패했습니다.';
+        if (error.message.includes('404')) errorMessage = '게시물을 찾을 수 없습니다.';
+        if (error.message.includes('429')) errorMessage = '인스타그램 요청 제한에 걸렸습니다. 나중에 다시 시도해주세요.';
+        
         return {
             postType: null,
             uploadTime: '',
@@ -230,11 +221,7 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
             caption: null,
             imageUrl: null,
             author: null,
-            error: '데이터를 가져오는데 실패했습니다. 인스타그램에서 요청을 차단했을 수 있습니다.',
+            error: errorMessage,
         };
-    } finally {
-        if (browser) {
-            await browser.close();
-        }
     }
 }
