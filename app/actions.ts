@@ -21,9 +21,12 @@ export interface PostData {
 }
 
 export async function scrapeInstagramPost(url: string): Promise<PostData> {
-    // 1. Validation
+    // 1. Validation & Cleaning
+    // Remove query parameters to handle links like ?img_index=1
+    const cleanUrl = url.split('?')[0];
+
     const instagramRegex = /^https:\/\/(www\.)?instagram\.com\/(p|reel)\/[\w-]+\/?/;
-    if (!url || !instagramRegex.test(url)) {
+    if (!cleanUrl || !instagramRegex.test(cleanUrl)) {
         return {
             postType: null,
             uploadTime: '',
@@ -40,7 +43,7 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
     try {
         // use fetch to get the HTML
         // Note: server-side fetch in Next.js/Node
-        const response = await fetch(url, {
+        const response = await fetch(cleanUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -125,7 +128,7 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
         // --- Process Data ---
 
         // 1. Determine Post Type
-        const isReel = url.includes('/reel/');
+        const isReel = cleanUrl.includes('/reel/');
         const postType = isReel ? 'Reel' : 'Post';
 
         // 2. Extract Metrics
