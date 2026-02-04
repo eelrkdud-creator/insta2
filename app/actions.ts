@@ -56,18 +56,18 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
         });
 
         if (!response.ok) {
-           if (response.status === 404) {
-             throw new Error('게시물을 찾을 수 없습니다.');
-           }
-           if (response.status === 429) {
-             throw new Error('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
-           }
-           if (response.status === 401 || response.status === 403) {
-             // Often means Instagram blocked the IP or requires login
-             console.warn('Access denied/Login required:', response.status);
-             // We can proceed to try reading whatever HTML came back, sometimes it has info, but usually likely an error page.
-             // But usually fetch throws/returns error page.
-           }
+            if (response.status === 404) {
+                throw new Error('게시물을 찾을 수 없습니다.');
+            }
+            if (response.status === 429) {
+                throw new Error('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+            }
+            if (response.status === 401 || response.status === 403) {
+                // Often means Instagram blocked the IP or requires login
+                console.warn('Access denied/Login required:', response.status);
+                // We can proceed to try reading whatever HTML came back, sometimes it has info, but usually likely an error page.
+                // But usually fetch throws/returns error page.
+            }
         }
 
         const html = await response.text();
@@ -84,7 +84,7 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
 
         // Check for login page redirection or error page in content
         if ((pageTitle.includes('Login') || pageTitle.includes('Page Not Found')) && !ogTitle) {
-             return {
+            return {
                 postType: null,
                 uploadTime: '',
                 likes: null,
@@ -103,15 +103,15 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
             try {
                 const text = $(el).html();
                 if (!text) return;
-                
+
                 const content = JSON.parse(text);
-                
+
                 // Sometimes it's an array of objects
                 const items = Array.isArray(content) ? content : [content];
 
                 for (const item of items) {
                     if (item['@type'] === 'InstagramPublicProfile') continue;
-                    
+
                     if (item.uploadDate || item.datePublished || item.interactionStatistic) {
                         jsonLd = item;
                         return false; // break loop
@@ -132,17 +132,21 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
         let likes = null;
         let comments = null;
         let views = null;
-        let uploadDateRaw: string | null = null;
+        // Prioritize <time> tag from DOM as requested by user
+        let uploadDateRaw: string | null = $('time').attr('datetime') || null;
         let caption = null;
         let author = null;
         let imageUrl = ogImage || null;
 
         if (jsonLd) {
-             uploadDateRaw = jsonLd.uploadDate || jsonLd.datePublished || null;
-             caption = jsonLd.caption || jsonLd.headline || jsonLd.articleBody || null;
-             author = jsonLd.author?.name || jsonLd.author?.alternateName || null;
+            // Only use JSON-LD date if we didn't find specific time tag
+            if (!uploadDateRaw) {
+                uploadDateRaw = jsonLd.uploadDate || jsonLd.datePublished || null;
+            }
+            caption = jsonLd.caption || jsonLd.headline || jsonLd.articleBody || null;
+            author = jsonLd.author?.name || jsonLd.author?.alternateName || null;
 
-             if (Array.isArray(jsonLd.interactionStatistic)) {
+            if (Array.isArray(jsonLd.interactionStatistic)) {
                 for (const stat of jsonLd.interactionStatistic) {
                     const type = stat.interactionType;
                     const count = stat.userInteractionCount;
@@ -159,10 +163,7 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
             }
         }
 
-        // Fallback: Time from DOM? 
-        // Cheerio sees what is returned. IF Instagram returns SSR HTML for this User-Agent (which they do for Bots), 
-        // we might find the date. But often it's Hydrated on client.
-        // Assuming JSON-LD is the best bet.
+        // Fallback: Time from DOM (explicitly checked above)
 
         // Parsing OG Description for Likes/Comments if JSON-LD failed
         // Format: "100 Likes, 5 Comments - ..."
@@ -177,14 +178,14 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
                 if (!comments && commentMatch) comments = commentMatch[1];
             }
         }
-        
+
         // Sometimes the title has the author: "User (@username) on Instagram:..." or "Name (@username) • Instagram photos..."
         if (!author && pageTitle) {
-             // Pattern: "Name (@username) •"
-             const authorMatch = pageTitle.match(/\(@([^\)]+)\)/);
-             if (authorMatch) {
-                 author = authorMatch[1]; 
-             }
+            // Pattern: "Name (@username) •"
+            const authorMatch = pageTitle.match(/\(@([^\)]+)\)/);
+            if (authorMatch) {
+                author = authorMatch[1];
+            }
         }
 
 
@@ -207,11 +208,11 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
 
     } catch (error: any) {
         console.error('Scraping error:', error);
-        
+
         let errorMessage = '데이터를 가져오는데 실패했습니다.';
         if (error.message.includes('404')) errorMessage = '게시물을 찾을 수 없습니다.';
         if (error.message.includes('429')) errorMessage = '인스타그램 요청 제한에 걸렸습니다. 나중에 다시 시도해주세요.';
-        
+
         return {
             postType: null,
             uploadTime: '',
