@@ -38,10 +38,10 @@ export default function Home() {
             <div className="w-full max-w-lg bg-white rounded-xl shadow-lg p-6 space-y-6 transition-all duration-300">
                 <div className="text-center space-y-2">
                     <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                        인스타그램 게시물 분석기
+                        메이투/뷰티캠 인스타그램 게시물 분석기
                     </h1>
                     <p className="text-sm text-gray-500">
-                        링크를 붙여넣어 업로드 시간(KST)과 참여 통계를 확인하세요.
+                        게시물의 링크를 붙여넣어 업로드 시간(KST)과 간단한 참여 통계를 확인할 수 있습니다!
                     </p>
                 </div>
 
