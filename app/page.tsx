@@ -41,8 +41,7 @@ export default function Home() {
                         인스타그램 게시물 분석
                     </h1>
                     <p className="text-sm text-gray-500">
-                        게시물의 링크를 붙여넣어 업로드 시간(KST)과
-                        간단한 참여 통계를 확인할 수 있습니다!
+                        게시물 링크를 이용해 업로드 시간(KST)과 참여 통계를 확인하기
                     </p>
                 </div>
 
