@@ -40,8 +40,9 @@ export default function Home() {
                     <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
                         인스타그램 게시물 분석
                     </h1>
-                    <p className="text-sm text-gray-500">
-                        게시물 링크를 이용해 업로드 시간(KST)과 참여 통계를 확인하기
+                    <p className="text-s text-gray-500">
+                        게시물 링크를 이용해 업로드 시간(KST)과 참여 통계를 확인해보세요!<br />
+                        *'알 수 없음' 으로 나올 경우 링크 뒤의 / 를 제거
                     </p>
                 </div>
 
