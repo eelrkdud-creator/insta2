@@ -42,7 +42,7 @@ export default function Home() {
                     </h1>
                     <p className="text-xs text-gray-500">
                         게시물 링크를 이용해 업로드 시간(KST)과 참여 통계를 확인해보세요!<br />
-                        *'알 수 없음' 으로 나올 경우 링크 뒤의 / 를 제거
+                        *'알 수 없음' 으로 나올 경우 링크 뒤의 / 이후 정보를 제거
                     </p>
                 </div>
 
