@@ -26,7 +26,7 @@ export default function Home() {
                 caption: null,
                 imageUrl: null,
                 author: null,
-                error: '예기치 않은 오류가 발생했습니다.'
+                error: '오류가 발생했습니다.'
             });
         } finally {
             setLoading(false);
@@ -38,11 +38,12 @@ export default function Home() {
             <div className="w-full max-w-lg bg-white rounded-xl shadow-lg p-6 space-y-6 transition-all duration-300">
                 <div className="text-center space-y-2">
                     <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                        인스타그램 게시물 분석
+                        인플루언서 게시물 업로드 시간 확인
                     </h1>
                     <p className="text-xs text-gray-500">
-                        게시물 링크를 이용해 업로드 시간(KST)과 공개된 참여 통계를 확인해보세요 🐹<br />
+                        게시물 링크를 이용해 인플루언서 게시물 업로드 시간을 확인해보세요!<br />
                         * 알 수 없음의 경우 링크 맨 뒤의 /를 지워주세요.<br />
+                        * 업로드 최소 30분 후 링크를 조회해주세요.<br />
                         제작 : gayeong lee
                     </p>
                 </div>
