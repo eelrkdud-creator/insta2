@@ -359,6 +359,87 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
             (uploadDate && modifiedDate && modifiedDate.diff(uploadDate, 'minute') >= 1)
         );
 
+                               return false; // break loop
+                    }
+                }
+            } catch (e) {
+                // ignore parse error
+            }
+        });
+
+        // --- Process Data ---
+
+        // 1. Determine Post Type
+        const isReel = cleanUrl.includes('/reel/');
+        const postType = isReel ? 'Reel' : 'Post';
+
+        // 2. Extract Metrics
+        let likes = null;
+        let comments = null;
+        let views = null;
+        const domTimeRaw = $('time').attr('datetime') || null;
+        const jsonTimeCandidates = extractJsonTimeCandidates(html, $);
+        const originalDateCandidates = [...jsonTimeCandidates.originalCandidates];
+        const modifiedDateCandidates = [...jsonTimeCandidates.modifiedCandidates];
+
+        if (domTimeRaw) {
+            addDateCandidate(modifiedDateCandidates, domTimeRaw, 'dom.time.datetime');
+        }
+
+        let caption = null;
+        let author = null;
+        let imageUrl = ogImage || null;
+
+        if (jsonLd) {
+            addDateCandidate(originalDateCandidates, jsonLd.uploadDate || jsonLd.datePublished, 'jsonLd.published');
+            addDateCandidate(modifiedDateCandidates, jsonLd.dateModified, 'jsonLd.dateModified');
+            caption = jsonLd.caption || jsonLd.headline || jsonLd.articleBody || null;
+            author = jsonLd.author?.name || jsonLd.author?.alternateName || null;
+
+            if (Array.isArray(jsonLd.interactionStatistic)) {
+                for (const stat of jsonLd.interactionStatistic) {
+                    const type = stat.interactionType;
+                    const count = stat.userInteractionCount;
+
+                    // Support both full URL and short type
+                    if (type === 'http://schema.org/LikeAction' || type === 'LikeAction') {
+                        likes = count.toString();
+                    } else if (type === 'http://schema.org/CommentAction' || type === 'CommentAction') {
+                        comments = count.toString();
+                    } else if (type === 'http://schema.org/WatchAction' || type === 'WatchAction') {
+                        views = count.toString();
+                    }
+                }
+            }
+        }
+
+        const uploadDate = pickOriginalTime(originalDateCandidates) || parseInstagramDate(domTimeRaw);
+        const modifiedDate = pickModifiedTime(modifiedDateCandidates, uploadDate);
+        const isEdited = Boolean(
+            jsonTimeCandidates.editFlags.length > 0 ||
+            (uploadDate && modifiedDate && modifiedDate.diff(uploadDate, 'minute') >= 1)
+        );
+
+        if (!uploadDate) {
+            const isMetadataMissing = !ogTitle && !jsonLd && !domTimeRaw && originalDateCandidates.length === 0;
+
+            return {
+                postType: null,
+                uploadTime: '',
+                modifiedTime: null,
+                isEdited: false,
+                likes: null,
+                comments: null,
+                views: null,
+                caption: null,
+                imageUrl: null,
+                author: null,
+                error: isMetadataMissing
+                    ? '인스타그램 접속 제한으로 게시물 시간 데이터를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.'
+                    : '인스타그램에서 게시물 시간 데이터를 제공하지 않아 확인할 수 없습니다.',
+            };
+        }
+
         // Parsing OG Description for Likes/Comments if JSON-LD failed
         // Format: "100 Likes, 5 Comments - ..."
         if ((!likes || !comments) && ogDesc) {
