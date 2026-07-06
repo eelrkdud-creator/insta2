@@ -195,6 +195,7 @@ export default function Home() {
             <footer className="absolute bottom-4 left-0 right-0 z-10 text-center text-[10px] leading-relaxed text-gray-400">
                 <p>제작 : 李佳鍈 Kaylen</p>
                 <p>gayeonglee@iwink.tw</p>
+                <p>gayeonglee.work@gmail.com</p>
             </footer>
         </main>
     );
