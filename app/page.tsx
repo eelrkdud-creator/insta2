@@ -106,9 +106,6 @@ export default function Home() {
         본문으로 이동
       </a>
       <aside className="workspace-rail" aria-label="서비스 메뉴">
-        <a className="rail-brand" href="/" aria-label="insta2 홈">
-          i<span>2</span>
-        </a>
         <a
           className="rail-item"
           href="#main"
@@ -118,19 +115,12 @@ export default function Home() {
           <Icon name="clock" />
           <span>조회</span>
         </a>
-        <span className="rail-bottom" aria-hidden="true">
-          i2
-        </span>
       </aside>
       <div className="workspace-body">
         <header className="topbar">
           <a href="/" className="wordmark">
-            insta<span>2</span>
+            메이투&amp;뷰티캠 코리아 협업 게시물 조회
           </a>
-          <span className="breadcrumb-divider" aria-hidden="true">
-            /
-          </span>
-          <span className="breadcrumb">게시물 조회</span>
           <span className="timezone">
             <span className="status-dot" />
             한국 표준시 · KST
@@ -140,7 +130,6 @@ export default function Home() {
           <div className="page-heading">
             <span className="eyebrow">INSTAGRAM POST VIEWER</span>
             <h1>게시물 업로드 시간 확인</h1>
-            <p>인스타그램 링크로 게시물 정보를 한눈에 확인하세요.</p>
           </div>
           <div className="content-grid">
             <div className="input-column">

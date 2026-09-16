@@ -58,14 +58,6 @@ a:focus-visible {
   color: white;
   padding: 22px 10px;
 }
-.rail-brand {
-  font-size: 25px;
-  font-weight: 800;
-  letter-spacing: -2px;
-}
-.rail-brand span {
-  color: #f4b9d9;
-}
 .rail-item {
   margin-top: 42px;
   width: 52px;
@@ -87,11 +79,6 @@ a:focus-visible {
   font-size: 11px;
   font-weight: 600;
 }
-.rail-bottom {
-  margin-top: auto;
-  color: #d3a4be;
-  font-size: 12px;
-}
 .workspace-body {
   margin-left: 76px;
 }
@@ -105,21 +92,11 @@ a:focus-visible {
   background: white;
 }
 .wordmark {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -1px;
-}
-.wordmark span {
-  color: var(--accent);
-}
-.breadcrumb-divider {
-  color: #d1d0d7;
-  font-size: 20px;
-  font-weight: 300;
-}
-.breadcrumb {
-  font-size: 13px;
-  color: #62616d;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.5;
+  word-break: keep-all;
 }
 .timezone {
   margin-left: auto;
@@ -667,8 +644,9 @@ input:focus {
     margin-left: 60px;
   }
   .topbar {
-    height: 62px;
-    padding: 0 22px;
+    min-height: 72px;
+    height: auto;
+    padding: 14px 22px;
     gap: 17px;
   }
   .timezone {
@@ -727,11 +705,11 @@ input:focus {
     padding: 26px 14px 20px;
   }
   .topbar {
-    padding: 0 16px;
+    padding: 14px 16px;
     gap: 13px;
   }
   .wordmark {
-    font-size: 22px;
+    font-size: 14px;
   }
   h1 {
     font-size: 23px;
