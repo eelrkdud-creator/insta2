@@ -1,22 +1,20 @@
-import './globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-
-const inter = Inter({ subsets: ['latin'] })
+import "./globals.css";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: 'Insta Viewer',
-    description: 'View Instagram post details',
-}
+  title: "insta2 | 게시물 업로드 시간 확인",
+  description:
+    "인스타그램 게시물과 릴스의 업로드 시간 및 게시물 정보를 확인하세요.",
+};
 
 export default function RootLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode
+  children: React.ReactNode;
 }) {
-    return (
-        <html lang="en">
-            <body className={inter.className}>{children}</body>
-        </html>
-    )
+  return (
+    <html lang="ko">
+      <body>{children}</body>
+    </html>
+  );
 }
