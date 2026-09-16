@@ -253,32 +253,24 @@ export default function Home() {
                 </div>
               ) : data ? (
                 <div className="result-content">
-                  <div className="post-heading">
-                    <div className="author-avatar">
-                      <Icon name="image" />
-                    </div>
-                    <strong className="author">
-                      {data.author
-                        ? `@${data.author.replace(/^@/, "")}`
-                        : "인스타그램 게시물"}
-                    </strong>
-                    <div className="post-badges">
-                      <span className="badge badge-magenta">
-                        {data.postType === "Reel" ? "릴스" : "게시물"}
-                      </span>
-                      <span
-                        className={`badge ${data.isEdited ? "badge-edited" : "badge-success"}`}
-                      >
-                        {!data.isEdited && <Icon name="check" />}
-                        {data.isEdited ? "수정됨" : "수정 없음"}
-                      </span>
-                    </div>
-                  </div>
                   <div className="time-block">
-                    <p>
-                      <Icon name="clock" />
-                      최초 업로드 시간 (KST)
-                    </p>
+                    <div className="time-heading">
+                      <p className="time-label">
+                        <Icon name="clock" />
+                        최초 업로드 시간 (KST)
+                      </p>
+                      <div className="post-badges">
+                        <span className="badge badge-magenta">
+                          {data.postType === "Reel" ? "릴스" : "게시물"}
+                        </span>
+                        <span
+                          className={`badge ${data.isEdited ? "badge-edited" : "badge-success"}`}
+                        >
+                          {!data.isEdited && <Icon name="check" />}
+                          {data.isEdited ? "수정됨" : "수정 없음"}
+                        </span>
+                      </div>
+                    </div>
                     <p className="upload-time">{data.uploadTime}</p>
                   </div>
                   {data.isEdited && (
