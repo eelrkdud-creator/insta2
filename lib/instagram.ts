@@ -125,6 +125,10 @@ export function parseInstagramHtml(html: string, url: string): PostData {
     const code = object.shortcode || object.code;
     if (code === parsedUrl.id) {
       media.push(object);
+      // Instagram can wrap the actual media in an object carrying the same
+      // shortcode (for example, `if_not_gated_logged_out`). Keep walking so
+      // the nested object containing `taken_at` is not skipped.
+      Object.values(object).forEach((child) => visit(child, depth + 1));
       return;
     }
     if (
@@ -203,7 +207,16 @@ export function parseInstagramHtml(html: string, url: string): PostData {
     }
   }
   edited ||= Boolean(modified);
-  const main = media[0];
+  const main =
+    media.find((record) =>
+      Boolean(
+        record.taken_at ||
+          record.taken_at_timestamp ||
+          record.media_type ||
+          record.like_count ||
+          record.caption,
+      ),
+    ) || media[0];
   const author = Array.isArray(schema?.author)
     ? schema.author[0]
     : schema?.author;
@@ -294,8 +307,13 @@ export async function scrapeInstagramPost(url: string): Promise<PostData> {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
         "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Cache-Control": "max-age=0",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
       },
     });
     if (!response.ok) {
