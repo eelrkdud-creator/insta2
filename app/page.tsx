@@ -1,202 +1,301 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { scrapeInstagramPost, PostData } from './actions';
+import { useState, type FormEvent } from "react";
+import { scrapeInstagramPost, type PostData } from "./actions";
+import Icon from "../components/Icon";
+import Shell from "../components/Shell";
+import BrandSave from "../components/BrandSave";
+import BulkLookup from "../components/BulkLookup";
 
 export default function Home() {
-    const [url, setUrl] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<PostData | null>(null);
+  const [bulk, setBulk] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<PostData | null>(null);
+  const [requestError, setRequestError] = useState("");
+  const [imageFailed, setImageFailed] = useState(false);
+  const error = requestError || data?.error;
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setData(null);
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (loading) return;
+    setLoading(true);
+    setData(null);
+    setRequestError("");
+    setImageFailed(false);
+    try {
+      setData(await scrapeInstagramPost(url.trim()));
+    } catch {
+      setRequestError("정보를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-        try {
-            const result = await scrapeInstagramPost(url);
-            setData(result);
-        } catch (err) {
-            setData({
-                postType: null,
-                uploadTime: '',
-                modifiedTime: null,
-                isEdited: false,
-                likes: null,
-                comments: null,
-                views: null,
-                caption: null,
-                imageUrl: null,
-                author: null,
-                error: '오류가 발생했습니다.'
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#fff7fb] via-white to-[#ecfbff] px-4 pb-16 pt-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-                src="/watermark-meitu.png"
-                alt=""
-                aria-hidden="true"
-                className="pointer-events-none absolute -left-10 top-16 w-56 max-w-[52vw] select-none opacity-[0.045] md:w-80"
+  return (
+    <Shell active="lookup">
+      <main id="main" className="main-content">
+        <div className="page-heading">
+          <span className="eyebrow">INSTAGRAM POST VIEWER</span>
+          <h1>게시물 업로드 시간 확인</h1>
+        </div>
+        <div className="mode-row">
+          <label className="mode-switch">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={bulk}
+              disabled={loading || bulkBusy}
+              onChange={(e) => setBulk(e.target.checked)}
             />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-                src="/watermark-beautycam.png"
-                alt=""
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-24 bottom-20 w-[34rem] max-w-[86vw] select-none opacity-[0.035] md:-right-28 md:w-[46rem]"
-            />
-
-            <div className="relative z-10 w-full max-w-lg bg-white/95 rounded-xl shadow-lg shadow-[#f41846]/10 p-6 space-y-6 transition-all duration-300 border border-[#f368dc]/15 backdrop-blur">
-                <div className="text-center space-y-2">
-                    <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#f41846] to-[#f368dc]">
-                        인플루언서 게시물 업로드 시간 확인
-                    </h1>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                        게시물 링크를 이용해 인플루언서 게시물 업로드 시간을 확인해보세요!<br />
-                        * 공개 게시물만 조회할 수 있으며, 비공개/삭제/로그인 필요 게시물은 확인이 어려울 수 있습니다.<br />
-                        * 인스타그램 정책이나 접속 제한에 따라 일시적으로 조회가 실패할 수 있습니다.<br />
-                        * 업로드 직후에는 정보 반영이 늦을 수 있으니 일정 시간 후 다시 조회해주세요.<br />
-                    </p>
+            <span className="switch-track" aria-hidden="true" />
+            <span>대량 확인</span>
+            <span className="mode-state">{bulk ? "ON" : "OFF"}</span>
+          </label>
+          <span className="mode-help">
+            {bulk
+              ? "브랜드를 선택하고 최대 20개를 한 번에 확인하세요."
+              : "게시물 링크 하나를 입력해 조회하세요."}
+          </span>
+        </div>
+        {bulk ? (
+          <BulkLookup onBusyChange={setBulkBusy} />
+        ) : (
+          <div className="content-grid">
+            <div className="input-column">
+              <section
+                className="panel input-panel"
+                aria-labelledby="input-title"
+              >
+                <div className="section-heading">
+                  <span className="section-icon">
+                    <Icon name="link" />
+                  </span>
+                  <h2 id="input-title">게시물 링크</h2>
                 </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <input
-                            id="url"
-                            type="url"
-                            required
-                            placeholder="https://www.instagram.com/p/..."
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            className="w-full px-4 py-3 border border-[#f368dc]/25 rounded-xl focus:ring-2 focus:ring-[#f41846]/30 focus:border-[#f41846] outline-none transition-all shadow-sm"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-gradient-to-r from-[#f41846] to-[#f368dc] text-white font-bold py-3 px-4 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all shadow-md shadow-[#f41846]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                분석 중...
-                            </span>
-                        ) : '정보 조회'}
-                    </button>
+                <p className="section-description">
+                  확인하고 싶은 게시물이나 릴스의 링크를 붙여넣어 주세요.
+                </p>
+                <form onSubmit={handleSubmit}>
+                  <label htmlFor="url">인스타그램 URL</label>
+                  <input
+                    id="url"
+                    name="url"
+                    type="url"
+                    required
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://www.instagram.com/p/..."
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-describedby="url-help"
+                  />
+                  <button
+                    className="submit-button"
+                    type="submit"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner" />
+                        조회 중...
+                      </>
+                    ) : (
+                      <>
+                        정보 조회
+                        <Icon name="arrow" />
+                      </>
+                    )}
+                  </button>
+                  <p id="url-help" className="field-help">
+                    <Icon name="info" />
+                    공개 게시물만 조회할 수 있어요.
+                  </p>
                 </form>
-
-                {data && (
-                    <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-3 duration-500">
-                        {data.error ? (
-                            <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl flex items-center justify-center text-center font-medium">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                {data.error}
-                            </div>
-                        ) : (
-                            <>
-                                {/* Header Info: Type & Author */}
-                                <div className="flex items-center justify-between px-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${data.postType === 'Reel'
-                                            ? 'bg-[#fff1f7] text-[#f41846]'
-                                            : 'bg-[#fff1f7] text-[#f368dc]'
-                                            }`}>
-                                            {data.postType === 'Reel' ? '릴스' : '게시물'}
-                                        </span>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${data.isEdited
-                                            ? 'bg-[#fff7df] text-[#d97800]'
-                                            : 'bg-[#ecfbff] text-[#069eb7]'
-                                            }`}>
-                                            {data.isEdited ? '수정됨' : '수정 없음'}
-                                        </span>
-                                    </div>
-                                    {data.author && (
-                                        <span className="text-gray-600 text-sm font-medium">@{data.author}</span>
-                                    )}
-                                </div>
-
-                                {/* Main Card: Date & Image */}
-                                <div className="bg-white border border-[#f368dc]/15 rounded-2xl overflow-hidden shadow-sm">
-                                    <div className="p-4 bg-gradient-to-r from-[#fff1f7] via-[#fff9ed] to-[#ecfbff] space-y-4">
-                                        <div>
-                                            <p className="text-xs text-[#f41846] font-bold uppercase mb-1">최초 업로드 시간 (KST)</p>
-                                            <p className="text-xl text-gray-900 font-mono font-bold">
-                                                {data.uploadTime}
-                                            </p>
-                                        </div>
-
-                                        {data.isEdited && (
-                                            <div className="pt-4 border-t border-[#f368dc]/20">
-                                                <p className="text-xs text-[#d97800] font-bold uppercase mb-1">수정 시간 (KST)</p>
-                                                <p className="text-xl text-gray-900 font-mono font-bold">
-                                                    {data.modifiedTime || '알 수 없음'}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {data.imageUrl ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={data.imageUrl} alt="Post content" className="w-full h-auto max-h-80 object-cover" />
-                                    ) : (
-                                        <div className="w-full h-40 bg-[#fff7fb] flex items-center justify-center text-gray-400 text-sm border-t border-[#f368dc]/10">
-                                            이미지 미리보기 없음
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Metrics Grid */}
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="bg-[#fff1f7] p-3 rounded-xl text-center border border-[#f368dc]/15">
-                                        <p className="text-[10px] text-[#f41846] uppercase font-bold mb-1">좋아요</p>
-                                        <p className="font-bold text-gray-800 text-lg">{data.likes || '-'}</p>
-                                    </div>
-                                    <div className="bg-[#fff9ed] p-3 rounded-xl text-center border border-[#ffbf2f]/20">
-                                        <p className="text-[10px] text-[#d97800] uppercase font-bold mb-1">댓글</p>
-                                        <p className="font-bold text-gray-800 text-lg">{data.comments || '-'}</p>
-                                    </div>
-                                    <div className={`p-3 rounded-xl text-center border ${data.postType === 'Reel'
-                                        ? 'bg-[#ecfbff] border-[#20cfe8]/20'
-                                        : 'bg-gray-50 border-gray-100 opacity-50'
-                                        }`}>
-                                        <p className={`text-[10px] uppercase font-bold mb-1 ${data.postType === 'Reel' ? 'text-[#069eb7]' : 'text-gray-400'
-                                            }`}>조회수</p>
-                                        <p className={`font-bold text-lg ${data.postType === 'Reel' ? 'text-gray-800' : 'text-gray-300'
-                                            }`}>{data.views || '-'}</p>
-                                    </div>
-                                </div>
-
-                                {data.caption && (
-                                    <div className="bg-[#fff7fb] p-4 rounded-xl border border-[#f368dc]/15">
-                                        <p className="text-xs text-[#f41846] font-bold uppercase mb-2">캡션 미리보기</p>
-                                        <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
-                                            {data.caption}
-                                        </p>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                )}
+              </section>
+              <section className="usage-notes" aria-labelledby="notes-title">
+                <h2 id="notes-title">조회 전 확인해 주세요</h2>
+                <ul>
+                  <li>
+                    비공개·삭제된 게시물이나 로그인이 필요한 게시물은 조회가
+                    어려울 수 있어요.
+                  </li>
+                  <li>
+                    인스타그램 접속 제한으로 조회가 일시적으로 실패할 수 있어요.
+                  </li>
+                  <li>방금 업로드한 게시물은 잠시 후 다시 조회해 주세요.</li>
+                </ul>
+              </section>
             </div>
-
-            <footer className="absolute bottom-4 left-0 right-0 z-10 text-center text-[10px] leading-relaxed text-gray-400">
-                <p>제작 : 李佳鍈 Kaylen</p>
-                <p>gayeonglee@iwink.tw</p>
-                <p>gayeonglee.work@gmail.com</p>
-            </footer>
-        </main>
-    );
+            <section
+              className="panel result-panel"
+              aria-labelledby="result-title"
+              aria-busy={loading}
+            >
+              <div className="result-heading">
+                <h2 id="result-title">조회 결과</h2>
+                <span
+                  className={`result-status ${data && !error ? "is-complete" : ""}`}
+                >
+                  {loading
+                    ? "조회 중"
+                    : error
+                      ? "조회 실패"
+                      : data
+                        ? "조회 완료"
+                        : "대기 중"}
+                </span>
+              </div>
+              <div role="status" className="sr-only">
+                {loading
+                  ? "게시물 정보를 조회하고 있습니다."
+                  : data && !error
+                    ? "게시물 정보 조회가 완료되었습니다."
+                    : ""}
+              </div>
+              {loading ? (
+                <div className="empty-state">
+                  <span className="empty-icon">
+                    <span className="spinner" />
+                  </span>
+                  <h3>게시물 정보를 확인하고 있어요</h3>
+                  <p>
+                    업로드 시간과 게시물 정보를 불러오는 중입니다.
+                    <br />
+                    잠시만 기다려 주세요.
+                  </p>
+                  <div className="loading-bars" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="empty-state error-state" role="alert">
+                  <span className="empty-icon">
+                    <Icon name="info" />
+                  </span>
+                  <h3>게시물을 조회하지 못했어요</h3>
+                  <p>{error}</p>
+                  <span className="state-hint">
+                    링크를 확인한 후 다시 조회해 주세요.
+                  </span>
+                </div>
+              ) : data ? (
+                <div className="result-content">
+                  <BrandSave
+                    key={
+                      data.saveToken ||
+                      data.metadata?.instagramPostId ||
+                      data.uploadTime
+                    }
+                    token={data.saveToken}
+                  />
+                  <div className="time-block">
+                    <div className="time-heading">
+                      <p className="time-label">
+                        <Icon name="clock" />
+                        최초 업로드 시간 (KST)
+                      </p>
+                      <div className="post-badges">
+                        <span className="badge badge-magenta">
+                          {data.postType === "Reel" ? "릴스" : "게시물"}
+                        </span>
+                        <span
+                          className={`badge ${data.isEdited ? "badge-edited" : "badge-success"}`}
+                        >
+                          {!data.isEdited && <Icon name="check" />}
+                          {data.isEdited ? "수정됨" : "수정 없음"}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="upload-time">{data.uploadTime}</p>
+                  </div>
+                  {data.isEdited && (
+                    <div className="modified-time">
+                      <span>수정 시간 (KST)</span>
+                      <strong>{data.modifiedTime || "알 수 없음"}</strong>
+                    </div>
+                  )}
+                  {data.imageUrl && !imageFailed ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className="post-image"
+                      src={data.imageUrl}
+                      alt="조회한 인스타그램 게시물"
+                      onError={() => setImageFailed(true)}
+                    />
+                  ) : (
+                    <div className="image-placeholder">
+                      <Icon name="image" />
+                      <span>이미지 미리보기를 제공하지 않는 게시물이에요.</span>
+                    </div>
+                  )}
+                  <dl className="metrics">
+                    <div>
+                      <dt>
+                        <Icon name="heart" />
+                        좋아요
+                      </dt>
+                      <dd>{data.likes ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <Icon name="comment" />
+                        댓글
+                      </dt>
+                      <dd>{data.comments ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <Icon name="play" />
+                        조회수
+                      </dt>
+                      <dd>
+                        {data.postType === "Reel" ? (data.views ?? "—") : "—"}
+                      </dd>
+                    </div>
+                  </dl>
+                  {data.caption && (
+                    <div className="caption">
+                      <h3>캡션</h3>
+                      <p>{data.caption}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <span className="empty-icon">
+                    <Icon name="clock" />
+                  </span>
+                  <h3>게시물의 시간을 확인해 보세요</h3>
+                  <p>
+                    입력란에 인스타그램 링크를 넣으면
+                    <br />
+                    조회한 게시물 정보가 이곳에 표시됩니다.
+                  </p>
+                  <div className="empty-features">
+                    <span>업로드 시간</span>
+                    <span>게시물 정보</span>
+                    <span>반응 수치</span>
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+        <footer className="footer">
+          <p>제작 : 李佳鍈 Kaylen</p>
+          <div>
+            <a href="mailto:gayeonglee@iwink.tw">gayeonglee@iwink.tw</a>
+            <span aria-hidden="true">·</span>
+            <a href="mailto:gayeonglee.work@gmail.com">
+              gayeonglee.work@gmail.com
+            </a>
+          </div>
+        </footer>
+      </main>
+    </Shell>
+  );
 }
