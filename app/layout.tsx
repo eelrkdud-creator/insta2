@@ -1,6 +1,8 @@
 import "./globals.css";
 import type { Metadata } from "next";
 
+export const maxDuration = 60;
+
 export const metadata: Metadata = {
   title: "메이투&뷰티캠 코리아 협업 게시물 조회",
   description:

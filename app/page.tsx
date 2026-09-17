@@ -2,81 +2,14 @@
 
 import { useState, type FormEvent } from "react";
 import { scrapeInstagramPost, type PostData } from "./actions";
-
-type IconName =
-  | "clock"
-  | "link"
-  | "arrow"
-  | "info"
-  | "heart"
-  | "comment"
-  | "play"
-  | "image"
-  | "check";
-function Icon({
-  name,
-  className = "",
-}: {
-  name: IconName;
-  className?: string;
-}) {
-  const paths: Record<IconName, React.ReactNode> = {
-    clock: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-      </>
-    ),
-    link: (
-      <>
-        <path
-          d="m10 13 4-4M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 1 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"
-          transform="translate(1 0)"
-        />
-      </>
-    ),
-    arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
-    info: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 11v6m0-10v.01" />
-      </>
-    ),
-    heart: (
-      <path d="M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-5 5 2 11 8 15 6-4 13-10 8-15Z" />
-    ),
-    comment: (
-      <path d="M21 11.5a9 9 0 0 1-9 9 10 10 0 0 1-4-.9L3 21l1.4-4.5A9 9 0 1 1 21 11.5Z" />
-    ),
-    play: <path d="m8 4 12 8-12 8V4Z" />,
-    image: (
-      <>
-        <rect x="3" y="3" width="18" height="18" rx="3" />
-        <circle cx="8" cy="8" r="1" />
-        <path d="m3 17 5-5 4 4 4-6 5 7" />
-      </>
-    ),
-    check: <path d="m5 12 4 4L19 6" />,
-  };
-  return (
-    <svg
-      className={`icon ${className}`}
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {paths[name]}
-    </svg>
-  );
-}
+import Icon from "../components/Icon";
+import Shell from "../components/Shell";
+import BrandSave from "../components/BrandSave";
+import BulkLookup from "../components/BulkLookup";
 
 export default function Home() {
+  const [bulk, setBulk] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<PostData | null>(null);
@@ -101,36 +34,34 @@ export default function Home() {
   }
 
   return (
-    <div className="workspace">
-      <a href="#main" className="skip-link">
-        본문으로 이동
-      </a>
-      <aside className="workspace-rail" aria-label="서비스 메뉴">
-        <a
-          className="rail-item"
-          href="#main"
-          aria-label="게시물 조회"
-          aria-current="page"
-        >
-          <Icon name="clock" />
-          <span>조회</span>
-        </a>
-      </aside>
-      <div className="workspace-body">
-        <header className="topbar">
-          <a href="/" className="wordmark">
-            메이투&amp;뷰티캠 코리아 협업 게시물 조회
-          </a>
-          <span className="timezone">
-            <span className="status-dot" />
-            한국 표준시 · KST
+    <Shell active="lookup">
+      <main id="main" className="main-content">
+        <div className="page-heading">
+          <span className="eyebrow">INSTAGRAM POST VIEWER</span>
+          <h1>게시물 업로드 시간 확인</h1>
+        </div>
+        <div className="mode-row">
+          <label className="mode-switch">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={bulk}
+              disabled={loading || bulkBusy}
+              onChange={(e) => setBulk(e.target.checked)}
+            />
+            <span className="switch-track" aria-hidden="true" />
+            <span>대량 확인</span>
+            <span className="mode-state">{bulk ? "ON" : "OFF"}</span>
+          </label>
+          <span className="mode-help">
+            {bulk
+              ? "브랜드를 선택하고 최대 20개를 한 번에 확인하세요."
+              : "게시물 링크 하나를 입력해 조회하세요."}
           </span>
-        </header>
-        <main id="main" className="main-content">
-          <div className="page-heading">
-            <span className="eyebrow">INSTAGRAM POST VIEWER</span>
-            <h1>게시물 업로드 시간 확인</h1>
-          </div>
+        </div>
+        {bulk ? (
+          <BulkLookup onBusyChange={setBulkBusy} />
+        ) : (
           <div className="content-grid">
             <div className="input-column">
               <section
@@ -253,6 +184,14 @@ export default function Home() {
                 </div>
               ) : data ? (
                 <div className="result-content">
+                  <BrandSave
+                    key={
+                      data.saveToken ||
+                      data.metadata?.instagramPostId ||
+                      data.uploadTime
+                    }
+                    token={data.saveToken}
+                  />
                   <div className="time-block">
                     <div className="time-heading">
                       <p className="time-label">
@@ -345,18 +284,18 @@ export default function Home() {
               )}
             </section>
           </div>
-          <footer className="footer">
-            <p>제작 : 李佳鍈 Kaylen</p>
-            <div>
-              <a href="mailto:gayeonglee@iwink.tw">gayeonglee@iwink.tw</a>
-              <span aria-hidden="true">·</span>
-              <a href="mailto:gayeonglee.work@gmail.com">
-                gayeonglee.work@gmail.com
-              </a>
-            </div>
-          </footer>
-        </main>
-      </div>
-    </div>
+        )}
+        <footer className="footer">
+          <p>제작 : 李佳鍈 Kaylen</p>
+          <div>
+            <a href="mailto:gayeonglee@iwink.tw">gayeonglee@iwink.tw</a>
+            <span aria-hidden="true">·</span>
+            <a href="mailto:gayeonglee.work@gmail.com">
+              gayeonglee.work@gmail.com
+            </a>
+          </div>
+        </footer>
+      </main>
+    </Shell>
   );
 }

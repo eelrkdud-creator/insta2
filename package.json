@@ -5,22 +5,27 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/prepare-db.mjs && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:migrate": "node scripts/migrate.mjs",
+    "test": "node --conditions=react-server --import tsx --test tests/*.test.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "autoprefixer": "^10.4.23",
     "cheerio": "^1.2.0",
     "dayjs": "^1.11.19",
     "next": "^16.1.6",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^25.0.10",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
@@ -28,6 +33,7 @@
     "eslint-config-next": "^16.1.6",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.13",
     "typescript": "^5.9.3"
   }
 }
