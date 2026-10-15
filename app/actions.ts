@@ -15,6 +15,7 @@ import {
   type SaveResult,
 } from "../lib/types";
 import { parseBatchInput, parseInstagramUrl } from "../lib/urls";
+import { hasAnalysisAccess } from "../lib/analysis-auth";
 export type { PostData } from "../lib/types";
 
 export async function scrapeInstagramPost(url: string): Promise<PostData> {
@@ -77,6 +78,12 @@ export async function lookupBatchPost(
   }
 }
 export async function getAnalytics(): Promise<AnalyticsResult> {
+  if (!(await hasAnalysisAccess()))
+    return {
+      rows: [],
+      total: 0,
+      error: "분석창 비밀번호를 먼저 입력해 주세요.",
+    };
   try {
     const rows = await readAnalytics();
     return {
