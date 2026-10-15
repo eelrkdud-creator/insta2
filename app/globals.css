@@ -737,6 +737,83 @@ input:focus {
 }
 
 /* Collection and analysis extend the existing magenta workspace. */
+
+.analysis-lock {
+  max-width: 720px;
+  margin: 26px auto 0;
+  padding: 34px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px 18px;
+  align-items: start;
+}
+
+.analysis-lock-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(126, 34, 206, 0.1);
+  font-size: 22px;
+}
+
+.analysis-lock-copy h2 {
+  margin: 5px 0 6px;
+}
+
+.analysis-lock-copy p,
+.analysis-lock-error {
+  margin: 0;
+}
+
+.analysis-lock-form {
+  grid-column: 1 / -1;
+}
+
+.analysis-lock-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.analysis-lock-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.analysis-lock-input-row input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.analysis-lock-input-row input:focus {
+  outline: 3px solid rgba(126, 34, 206, 0.16);
+  border-color: var(--accent);
+}
+
+.analysis-lock-error {
+  padding-top: 9px;
+  color: #b42318;
+  font-weight: 700;
+}
+
+@media (max-width: 620px) {
+  .analysis-lock {
+    padding: 24px 20px;
+  }
+
+  .analysis-lock-input-row {
+    flex-direction: column;
+  }
+}
+
 .workspace-rail {
   gap: 12px;
 }
