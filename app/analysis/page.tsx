@@ -1,6 +1,10 @@
 import Shell from "../../components/Shell";
 import Analytics from "../../components/Analytics";
-export default function AnalysisPage() {
+import AnalysisLogin from "../../components/AnalysisLogin";
+import { hasAnalysisAccess } from "../../lib/analysis-auth";
+
+export default async function AnalysisPage() {
+  const authorized = await hasAnalysisAccess();
   return (
     <Shell active="analysis">
       <main id="main" className="main-content">
@@ -9,7 +13,7 @@ export default function AnalysisPage() {
           <h1>협업 게시물 분석</h1>
           <p>브랜드와 게시물 유형을 조합해 업로드 패턴을 확인하세요.</p>
         </div>
-        <Analytics />
+        {authorized ? <Analytics /> : <AnalysisLogin />}
       </main>
     </Shell>
   );
